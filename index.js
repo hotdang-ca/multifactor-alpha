@@ -3,7 +3,8 @@ const http = require('http').Server(app);
 const io = require('socket.io')(http);
 const uuidv1 = require('uuid/v1');
 
-const PORT = 3002;
+const PORT = process.env.PORT || 3002;
+
 const DEFAULT_NUM_AUTHS = 3;
 
 const authDict = {};
