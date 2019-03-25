@@ -2,8 +2,29 @@ const app = require('express')();
 const http = require('http').Server(app);
 const io = require('socket.io')(http);
 const uuidv1 = require('uuid/v1');
+const Twilio = require('twilio');
+const config = require('dotenv').config();
+const address = http.address();
+
+const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
+const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+
+if (!twilioAccountSid || !twilioAuthToken) {
+  console.log('No twilio configuration.');
+  return;
+}
+
+const twilio = new Twilio(twilioAccountSid, twilioAuthToken);
 
 const PORT = process.env.PORT || 3002;
+
+const contacts = [];
+const twilioFrom = '+13069922727';
+
+// Get this from the tenants database
+contacts.push({
+  to: '+13065809501',
+});
 
 const DEFAULT_NUM_AUTHS = 3;
 
@@ -28,6 +49,21 @@ io.on('connection', (socket) => {
     console.log(`new auth for ${uuid}`);
 
     console.log('auths: ', authDict);
+
+    contacts.forEach((recipient) => {
+      twilio.messages.create({
+        from: twilioFrom,
+        to: recipient.to,
+        body: `MULTIFACTOR.IO requires your authorization. https://multifactor.herokuapp.com/authorize/${uuid}. DO NOT REPLY`,
+      }, (err, result) => {
+        if (err) {
+          console.log('Twilio error:', err);
+          return;
+        }
+
+        console.log(`Twilio result: ${result.sid}`);
+      });
+    });
 
     const payload = {
       uuid,
@@ -76,5 +112,6 @@ io.on('connection', (socket) => {
 });
 
 http.listen(PORT, () => {
-  console.log(`Listening on http://localhost:${PORT}`);
+  console.log(`Listening on ${PORT}`);
+  console.log(http);
 });
