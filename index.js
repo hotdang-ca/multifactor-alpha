@@ -8,6 +8,7 @@ const address = http.address();
 
 const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
+const twilioFrom = process.env.TWILIO_FROM;
 
 if (!twilioAccountSid || !twilioAuthToken) {
   console.log('No twilio configuration.');
@@ -17,9 +18,7 @@ if (!twilioAccountSid || !twilioAuthToken) {
 const twilio = new Twilio(twilioAccountSid, twilioAuthToken);
 
 const PORT = process.env.PORT || 3002;
-
 const contacts = [];
-const twilioFrom = '+13069922727';
 
 // Get this from the tenants database
 contacts.push({
