@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    const { pathname } = window.location;
+    const uuid = pathname.replace('/authorize/', '');
+  </script>
+  <head>
+    <style>
+      * {
+        font-family: Verdana, Geneva, Tahoma, sans-serif;
+      }
+    </style>
+    <title>Authorize?</title>
+  </head>
+  <body>
+    <div style="text-align: center">
+      <h2>Do you authorize?</h2>
+      <h4 id="uuid"></h4>
+      <button id="authButton">Yes</button>
+    </div>
+
+    <script>
+      document.getElementById('uuid').innerHTML = uuid;
+
+      const authButton = document.getElementById('authButton');
+      authButton.addEventListener('click', () => {
+        socket.emit('give-auth', JSON.stringify({ uuid }));
+        authButton.disabled = true;
+        authButton.innerHTML = 'You\'ve Authorized!';
+      });
+    </script>
+  </body>
+</html>

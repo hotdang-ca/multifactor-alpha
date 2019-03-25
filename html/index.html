@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Socket.IO Waiting for authorizations</title>
+  </head>
+  <style type="text/css">
+    * {
+      font-family: Verdana, Geneva, Tahoma, sans-serif;
+    }
+  </style>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    let uuid;
+
+    const socket = io();
+  </script>
+  <body>
+    <div>
+      <p>
+        <strong id="authUuid"></strong>
+      </p>
+      <p id="hasMetRequirements">
+        Waiting for authorizations...
+      </p>
+      <p>
+        <button id="doTheThing" style="display: none">Do the thing!</button>
+      </p>
+      <p>
+        Received <span id="numAuthorizations"></span> out of <span id="requiredAuths"></span> authorizations.
+      </p>
+    </div>
+
+    <script>
+      socket.emit('require-auth');
+
+      socket.on('auth-msg', (payload) => {
+        console.log('Received auth-msg');
+
+        const payloadObject = JSON.parse(payload);
+        console.log(payloadObject);
+
+        if (uuid === payloadObject.uuid) {
+          // it's ours
+          const { count, isMetRequirement } = payloadObject;
+          document.getElementById('numAuthorizations').innerHTML = count;
+          if (isMetRequirement) {
+            document.getElementById('hasMetRequirements').innerHTML = 'You\'ve received the required amount of authorizations!';
+            document.getElementById('doTheThing').style.display = "block";
+          }
+        }
+      });
+
+      socket.on('got-uuid', (payload) => {
+        const uuidPayload = JSON.parse(payload);
+        uuid = uuidPayload.uuid;
+
+        document.getElementById('authUuid').innerHTML = uuidPayload.uuid;
+        document.getElementById('numAuthorizations').innerHTML = 'none';
+        document.getElementById('requiredAuths').innerHTML = uuidPayload.required;
+      });
+    </script>
+  </body>
+</html>
