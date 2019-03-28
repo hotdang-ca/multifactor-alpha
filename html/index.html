@@ -17,23 +17,89 @@
   <body>
     <div>
       <p>
+        <h2>Auth Code:</h2>
         <strong id="authUuid"></strong>
       </p>
+
       <p id="hasMetRequirements">
-        Waiting for authorizations...
-        <p>Sending a message to: <strong>+1-306-580-9501</strong></p>
+        Add some contacts to notify...
       </p>
+
+      <div>
+        <h2>Add authorizor</h2>
+        <input type="text" id="to" placeholder="Add phone number..." />
+        <button id="addButton">Add</button>
+        <div id="authorizors"></div>
+      </div>
+
+      <div>
+        <button id='requestAuths'>Send authorizations</button>
+      </div>
       <p>
         <button id="doTheThing" style="display: none">Do the thing!</button>
       </p>
-      <p>
+      <p id="auth-status" style="display: none">
         Received <span id="numAuthorizations"></span> out of <span id="requiredAuths"></span> authorizations.
       </p>
     </div>
 
     <script>
+      const sendAuthsButton = document.getElementById('requestAuths');
+      sendAuthsButton.addEventListener('click', () => {
+        socket.emit('get-auth');
+      });
+
+      const addButton = document.getElementById('addButton');
+      addButton.addEventListener('click', () => {
+        addAuthorizor();
+      });
+
+      const addAuthorizor = () => {
+        const toInput = document.getElementById('to');
+        fetch('/add-authorizers', {
+          method: 'post',
+          headers: {
+            'Content-type': 'application/json'
+          },
+          body: JSON.stringify(
+            {
+              contact: {
+                to: toInput.value,
+              }
+          })
+        })
+        .then((response) => {
+          return response.json();
+        })
+        .then((data) => {
+          toInput.value = '';
+
+          // extract contacts we will inform
+          const { contacts } = data;
+          const contactsDb = document.getElementById('authorizors');
+          contactsDb.innerHTML = '';
+          contacts.forEach((contact) => {
+            const authHtml = document.createElement('div');
+            authHtml.innerHTML = contact.to;
+            contactsDb.appendChild(authHtml);
+          });
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+      };
+
       socket.emit('require-auth');
 
+      // When the server sent our auths
+      socket.on('auths-sent', (payload) => {
+        console.log('auths are sent. now waiting.');
+        document.getElementById('hasMetRequirements').innerHTML = 'Sent authorizations. Waiting...';
+        document.getElementById('auth-status').style.display = 'block';
+        document.getElementById('requestAuths').setAttribute('disabled', 'disabled');
+      });
+
+      // When an incoming Authorization comes in
       socket.on('auth-msg', (payload) => {
         console.log('Received auth-msg');
 

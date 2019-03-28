@@ -1,10 +1,16 @@
 const app = require('express')();
+
 const http = require('http').Server(app);
+const address = http.address();
+
 const io = require('socket.io')(http);
 const uuidv1 = require('uuid/v1');
 const Twilio = require('twilio');
 const config = require('dotenv').config();
-const address = http.address();
+
+const bodyParser = require('body-parser');
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 
 const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
 const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
@@ -19,11 +25,9 @@ const twilio = new Twilio(twilioAccountSid, twilioAuthToken);
 
 const PORT = process.env.PORT || 3002;
 const contacts = [];
-
-// Get this from the tenants database
-contacts.push({
-  to: '+13065809501',
-});
+// {
+//   to: '+13065809501',
+// }
 
 const DEFAULT_NUM_AUTHS = 3;
 
@@ -32,6 +36,20 @@ const authDict = {};
 app.get('/', (req, res) => {
   // generate a new uuid
   res.sendFile(`${__dirname}/html/index.html`);
+});
+
+app.post('/add-authorizers', (req, res) => {
+  console.log('req');
+
+  const { contact } = req.body;
+  contacts.push(contact);
+
+  res.send(JSON.stringify(
+    {
+      status: `Added ${contact.to}. ${contacts.length} contacts to notify.`,
+      contacts,
+    }
+  ));
 });
 
 app.get('/authorize/:uuid', (req, res) => {
@@ -46,9 +64,15 @@ io.on('connection', (socket) => {
     authDict[uuid] = numAuthorizations;
 
     console.log(`new auth for ${uuid}`);
+    const payload = {
+      uuid,
+      required: DEFAULT_NUM_AUTHS,
+    };
 
-    console.log('auths: ', authDict);
+    socket.emit('got-uuid', JSON.stringify(payload));
+  });
 
+  socket.on('get-auth', () => {
     contacts.forEach((recipient) => {
       twilio.messages.create({
         from: twilioFrom,
@@ -59,17 +83,11 @@ io.on('connection', (socket) => {
           console.log('Twilio error:', err);
           return;
         }
-
         console.log(`Twilio result: ${result.sid}`);
       });
     });
 
-    const payload = {
-      uuid,
-      required: DEFAULT_NUM_AUTHS,
-    };
-
-    socket.emit('got-uuid', JSON.stringify(payload));
+    socket.emit('auths-sent');
   });
 
   socket.on('give-auth', (payload) => {
