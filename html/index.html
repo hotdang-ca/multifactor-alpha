@@ -11,7 +11,6 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     let uuid;
-
     const socket = io();
   </script>
   <body>
@@ -29,6 +28,7 @@
         <h2>Add authorizor</h2>
         <input type="text" id="to" placeholder="Add phone number..." />
         <button id="addButton">Add</button>
+        <div id="add-phone-status"></div>
         <div id="authorizors"></div>
       </div>
 
@@ -63,6 +63,7 @@
           },
           body: JSON.stringify(
             {
+              uuid,
               contact: {
                 to: toInput.value,
               }
@@ -74,10 +75,20 @@
         .then((data) => {
           toInput.value = '';
 
-          // extract contacts we will inform
-          const { contacts } = data;
           const contactsDb = document.getElementById('authorizors');
+          const statusDiv = document.getElementById('add-phone-status');
+
+          // extract contacts we will inform
+          const { contacts, status } = data;
+          if (!contacts) {
+            // it was an error, and has a status
+            statusDiv.innerHTML = status;
+            return;
+          }
+
+        
           contactsDb.innerHTML = '';
+          statusDiv.innerHTML = status;
           contacts.forEach((contact) => {
             const authHtml = document.createElement('div');
             authHtml.innerHTML = contact.to;
@@ -117,6 +128,7 @@
         }
       });
 
+      // we've received a response from server that we have an auth code
       socket.on('got-uuid', (payload) => {
         const uuidPayload = JSON.parse(payload);
         uuid = uuidPayload.uuid;

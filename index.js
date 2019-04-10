@@ -24,9 +24,16 @@ if (!twilioAccountSid || !twilioAuthToken) {
 const twilio = new Twilio(twilioAccountSid, twilioAuthToken);
 
 const PORT = process.env.PORT || 3002;
-const contacts = [];
+const contacts = {};
 // {
-//   to: '+13065809501',
+//   authkey: [
+//     {
+//       to: '+13065809501',
+//     },
+//     {
+//       to: '+13065809501',
+//     }
+//   ],
 // }
 
 const DEFAULT_NUM_AUTHS = 3;
@@ -41,13 +48,30 @@ app.get('/', (req, res) => {
 app.post('/add-authorizers', (req, res) => {
   console.log('req');
 
-  const { contact } = req.body;
-  contacts.push(contact);
+  if (!req.body) {
+    return res.status(400).send(JSON.stringify({
+      status: 'failed to add; malformed request',
+    }));
+  }
+  
+  const { contact, uuid } = req.body;
+
+  if (!contact || !contact.to || !uuid) {
+    return res.status(400).send(JSON.stringify({
+      status: 'failed to add; required parameters missing.',
+    }));
+  }
+
+  if (!contacts[uuid]) {
+    contacts[uuid] = [];
+  }
+
+  contacts[uuid].push(contact);
 
   res.send(JSON.stringify(
     {
-      status: `Added ${contact.to}. ${contacts.length} contacts to notify.`,
-      contacts,
+      status: `Added ${contact.to}. ${contacts[uuid].length} contacts to notify.`,
+      contacts: contacts[uuid],
     }
   ));
 });
@@ -72,8 +96,11 @@ io.on('connection', (socket) => {
     socket.emit('got-uuid', JSON.stringify(payload));
   });
 
-  socket.on('get-auth', () => {
-    contacts.forEach((recipient) => {
+  socket.on('get-auth', (payload) => {
+    const payloadObject = JSON.parse(payload);
+    const { auth } = payloadObject;
+
+    contacts[auth].forEach((recipient) => {
       twilio.messages.create({
         from: twilioFrom,
         to: recipient.to,
@@ -130,5 +157,4 @@ io.on('connection', (socket) => {
 
 http.listen(PORT, () => {
   console.log(`Listening on ${PORT}`);
-  console.log(http);
 });
