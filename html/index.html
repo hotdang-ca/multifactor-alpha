@@ -46,7 +46,8 @@
     <script>
       const sendAuthsButton = document.getElementById('requestAuths');
       sendAuthsButton.addEventListener('click', () => {
-        socket.emit('get-auth');
+        const auth = document.getElementById('authUuid').innerHTML;
+        socket.emit('get-auth', JSON.stringify({ auth }));
       });
 
       const addButton = document.getElementById('addButton');
@@ -86,7 +87,7 @@
             return;
           }
 
-        
+
           contactsDb.innerHTML = '';
           statusDiv.innerHTML = status;
           contacts.forEach((contact) => {
@@ -108,6 +109,12 @@
         document.getElementById('hasMetRequirements').innerHTML = 'Sent authorizations. Waiting...';
         document.getElementById('auth-status').style.display = 'block';
         document.getElementById('requestAuths').setAttribute('disabled', 'disabled');
+      });
+
+      socket.on('auths-failed', (payload) => {
+        console.log('auths have failed.');
+        document.getElementById('requestAuths').setAttribute('disabled', 'disabled');
+        document.getElementById('hasMetRequirements').innerHTML = 'Error with authorizations';
       });
 
       // When an incoming Authorization comes in

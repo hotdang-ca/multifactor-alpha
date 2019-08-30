@@ -46,14 +46,12 @@ app.get('/', (req, res) => {
 });
 
 app.post('/add-authorizers', (req, res) => {
-  console.log('req');
-
   if (!req.body) {
     return res.status(400).send(JSON.stringify({
       status: 'failed to add; malformed request',
     }));
   }
-  
+
   const { contact, uuid } = req.body;
 
   if (!contact || !contact.to || !uuid) {
@@ -97,24 +95,37 @@ io.on('connection', (socket) => {
   });
 
   socket.on('get-auth', (payload) => {
-    const payloadObject = JSON.parse(payload);
-    const { auth } = payloadObject;
+    console.log('Get-Auth Button pressed. Payload: ', payload);
+    console.log('contacts', contacts);
+    console.log('jsonified payload', JSON.parse(payload));
 
-    contacts[auth].forEach((recipient) => {
-      twilio.messages.create({
-        from: twilioFrom,
-        to: recipient.to,
-        body: `MULTIFACTOR.IO requires your authorization. https://multifactor.herokuapp.com/authorize/${uuid}. DO NOT REPLY`,
-      }, (err, result) => {
-        if (err) {
-          console.log('Twilio error:', err);
-          return;
-        }
-        console.log(`Twilio result: ${result.sid}`);
+    try {
+      const payloadObject = JSON.parse(payload);
+      const { auth } = payloadObject;
+
+      contacts[auth].forEach((recipient) => {
+        const messageBody = {
+          from: twilioFrom,
+          to: recipient.to,
+          body: `MULTIFACTOR.IO requires your authorization. https://multifactor.herokuapp.com/authorize/${uuid}. DO NOT REPLY`,
+        };
+
+        console.log('body:', messageBody);
+
+        twilio.messages.create(messageBody, (err, result) => {
+          if (err) {
+            console.log('Twilio error:', err);
+            return;
+          }
+          console.log(`Twilio result: ${result.sid}`);
+        });
       });
-    });
 
-    socket.emit('auths-sent');
+      socket.emit('auths-sent');
+    } catch (e) {
+      console.log('couldnt interpret the payload.');
+      socket.emit('auths-failed');
+    }
   });
 
   socket.on('give-auth', (payload) => {
