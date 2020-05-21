@@ -107,7 +107,7 @@ io.on('connection', (socket) => {
         const messageBody = {
           from: twilioFrom,
           to: recipient.to,
-          body: `MULTIFACTOR.IO requires your authorization. https://multifactor.herokuapp.com/authorize/${uuid}. DO NOT REPLY`,
+          body: `MANYFACTOR.IO requires your authorization. https://manyfactor.io/authorize/${uuid}. DO NOT REPLY`,
         };
 
         console.log('body:', messageBody);

@@ -1,0 +1,21 @@
+version: '2'
+services:
+  multifactor-app:
+    container_name: multifactor-app
+
+    environment:
+      NODE_ENV: production
+      VIRTUAL_HOST: manyfactor.io
+      LETSENCRYPT_HOST: manyfactor.io
+      LETSENCRYPT_EMAIL: james+manyfactor@hotdang.ca
+
+    build:
+      context: .
+     
+    expose:
+      - 80
+
+networks:
+  default:
+    external:
+      name: nginx-proxy

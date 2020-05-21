@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Socket.IO Waiting for authorizations</title>
+    <title>Manyfactor.IO Waiting for authorizations</title>
   </head>
   <style type="text/css">
     * {
@@ -21,7 +21,7 @@
       </p>
 
       <p id="hasMetRequirements">
-        Add some contacts to notify...
+        Add <strong>three</strong> contacts to notify...
       </p>
 
       <div>
@@ -132,10 +132,12 @@
             document.getElementById('hasMetRequirements').innerHTML = 'You\'ve received the required amount of authorizations!';
             document.getElementById('doTheThing').style.display = "block";
           }
-        }
+        } else {
+          console.log(`${uuid} does not equal ${payloadObject.uuid}`);
+	}
       });
 
-      // we've received a response from server that we have an auth code
+      // we've received a response from server that we have an auth code and ready to wait on authorizations
       socket.on('got-uuid', (payload) => {
         const uuidPayload = JSON.parse(payload);
         uuid = uuidPayload.uuid;
