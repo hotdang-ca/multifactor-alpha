@@ -5,9 +5,21 @@ const address = http.address();
 
 const io = require('socket.io')(http);
 const uuidv1 = require('uuid/v1');
+
 const Twilio = require('twilio');
+const MessagingResponse = require('twilio').twiml.MessagingResponse;
+
 const config = require('dotenv').config();
 
+// setup mailgun
+const mailgun = require("mailgun-js");
+const MG_DOMAIN = process.env.MAILGUN_DOMAIN;
+const MG_APIKEY = process.env.MAILGUN_API_KEY;
+const MG_FROM = process.env.MAILGUN_FROM_ADDRESS;
+
+const mg = mailgun({apiKey: MG_APIKEY, domain: MG_DOMAIN});
+
+// setup bodyParser
 const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -24,6 +36,8 @@ if (!twilioAccountSid || !twilioAuthToken) {
 const twilio = new Twilio(twilioAccountSid, twilioAuthToken);
 
 const PORT = process.env.PORT || 3002;
+const redirects = [];
+
 const contacts = {};
 // {
 //   authkey: [
@@ -43,6 +57,54 @@ const authDict = {};
 app.get('/', (req, res) => {
   // generate a new uuid
   res.sendFile(`${__dirname}/html/index.html`);
+});
+
+// TODO: set up webhook to listen to incoming sms
+app.post('/api/webhooks/incoming-sms', (req, res) => {
+  const sms = req.body.From;
+  const smsBody = req.body.Body;
+
+  const cleanNumber = (number) => number.replace('+', '').replace('-', '');
+
+  const cleanIncomingSms = cleanNumber(sms);
+  const redirector = redirects.find((r) => cleanNumber(r.fromSms) === cleanIncomingSms);
+
+  if (!redirector) {
+    return res.status(404).json({error: 'not found'});
+  }
+
+  const toEmail = redirector.toEmail;
+
+  const data = {
+    from: `Manyfactor.io <${MG_FROM}>`,
+    to: toEmail,
+    subject: 'ManyFactor.io redirected your SMS Authentication',
+    text: smsBody,
+  };
+  mg.messages().send(data, function (error, body) {
+    console.log(body);
+
+    const webhookResponse = new MessagingResponse();
+    res.end(webhookResponse.toString());
+  });
+});
+
+app.get('/setup-redirect', (req, res) => {
+  res.sendFile(`${__dirname}/html/redirect.html`);
+});
+
+app.get('/api/redirect-rules', (req, res) => {
+  res.send(JSON.stringify(redirects));
+});
+
+app.post('/api/redirect-rules', (req, res) => {
+  const { fromSms, toEmail } = req.body;
+  redirects.push({
+    fromSms,
+    toEmail,
+  });
+
+  return res.status(204).json({});
 });
 
 app.post('/add-authorizers', (req, res) => {

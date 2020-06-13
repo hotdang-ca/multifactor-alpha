@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>ManyFactor.io Redirector</title>
+        <style type="text/css">
+            * {
+              font-family: Verdana, Geneva, Tahoma, sans-serif;
+            }
+            input {
+                display: inline;
+            }
+          </style>
+          <script src="/socket.io/socket.io.js"></script>
+          <script>
+            const socket = io();
+          </script>
+    </head>
+
+    
+    <body>
+        <h1>Setup Redirect</h1>
+        When SMS to: <input id="fromSms" />, redirect to Email: <input  id="toEmail" /> <button id="add-redirect">Add Redirect Rule</button>
+        <hr>
+        Existing redirects:
+        <div id="redirects"></div>
+
+        <script>
+            const redirectsDiv = document.getElementById('redirects');
+            const addRuleButton = document.getElementById('add-redirect');
+            const smsFromField = document.getElementById('fromSms');
+            const emailToField = document.getElementById('toEmail');
+
+            function displayRedirects(jsonPayload) {
+                redirectsDiv.innerHTML = "";
+
+                for (const redirect of jsonPayload) {
+                    const { fromSms, toEmail } = redirect;
+                    const entry = document.createElement('div');
+                    const emailEntry = document.createElement('span');
+                    const smsEntry = document.createElement('span');
+                    const description = document.createElement('span');
+
+                    description.innerHTML = " redirects to ";
+                    emailEntry.innerHTML = toEmail;
+                    smsEntry.innerHTML = fromSms;
+
+                    entry.style = 'display: flex; flex-direction: row; justify-content: space-around';
+                    entry.appendChild(smsEntry);
+                    entry.appendChild(description);
+                    entry.appendChild(emailEntry);
+
+                    redirectsDiv.appendChild(entry);
+                }
+            }
+
+            function getRedirects() {
+                fetch('/api/redirect-rules', {})
+                    .then((response) => response.json())
+                    .then((jsonResponse) => displayRedirects(jsonResponse))
+                    .catch((error) => console.error('error', error));
+            }
+            
+            addRuleButton.addEventListener('click', (e) => {
+                const fromSms = smsFromField.value;
+                const toEmail = emailToField.value;
+
+                const options = {
+                    method: 'post',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ fromSms, toEmail }),
+                };
+
+                fetch('/api/redirect-rules', options)
+                    .then((response) => {
+                        if (response.status === 204) {
+                            getRedirects();
+                        }
+                    })
+                    .catch((error) => {
+                        console.log('error posting', error);
+                    });
+            });
+
+            getRedirects();
+        </script>
+    </body>
+</html>
