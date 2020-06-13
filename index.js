@@ -59,15 +59,24 @@ app.get('/', (req, res) => {
   res.sendFile(`${__dirname}/html/index.html`);
 });
 
+function cleanNumber(number) {
+  console.info('cleaning',number);
+
+  number.replace('+', '');
+  number.replace('-', '');
+
+  console.log('number is now ', number);
+  return number;
+}
+
 // TODO: set up webhook to listen to incoming sms
 app.post('/api/webhooks/incoming-sms', (req, res) => {
-  
-  const sms = req.body.To;
-  const smsBody = req.body.Body;
+  console.info('body', req.body);
 
-  console.info(`RECEIVED MESSAGE FROM ${req.body.From}`)
+  const sms = req.body.To || req.body.to;
+  const smsBody = req.body.Body || req.body.body;
 
-  const cleanNumber = (number) => number.replace('+', '').replace('-', '');
+  console.info(`RECEIVED MESSAGE FROM ${req.body.From || req.body.from }`)
 
   const cleanReceiverSms = cleanNumber(sms);
   const redirector = redirects.find((r) => cleanNumber(r.fromSms) === cleanReceiverSms);
