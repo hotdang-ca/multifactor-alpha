@@ -61,15 +61,19 @@ app.get('/', (req, res) => {
 
 // TODO: set up webhook to listen to incoming sms
 app.post('/api/webhooks/incoming-sms', (req, res) => {
-  const sms = req.body.From;
+  
+  const sms = req.body.To;
   const smsBody = req.body.Body;
+
+  console.info(`RECEIVED MESSAGE FROM ${req.body.From}`)
 
   const cleanNumber = (number) => number.replace('+', '').replace('-', '');
 
-  const cleanIncomingSms = cleanNumber(sms);
-  const redirector = redirects.find((r) => cleanNumber(r.fromSms) === cleanIncomingSms);
+  const cleanReceiverSms = cleanNumber(sms);
+  const redirector = redirects.find((r) => cleanNumber(r.fromSms) === cleanReceiverSms);
 
   if (!redirector) {
+    console.info('NO SUCH USER');
     return res.status(404).json({error: 'not found'});
   }
 
