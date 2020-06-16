@@ -13,8 +13,22 @@
     let uuid;
     const socket = io();
   </script>
-  <body>
-    <div>
+  <body style="text-align: center;">
+    <h1>Manyfactor.io Prototype</h1>
+    <svg style="width: 8rem; height: auto" id="Icons" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 66 66"><defs><style>.cls-1{fill:#189f99;}.cls-2{fill:#1cbbb4;}.cls-3{opacity:0.15;}.cls-4{fill:#fffcf2;}.cls-5{fill:#edc03d;}.cls-6{fill:#344e5f;}</style></defs><title>lock</title><g id="Lock"><g id="Circle_Shadow" data-name="Circle Shadow"><circle class="cls-1" cx="33" cy="34" r="31"/></g><g id="Circle"><circle class="cls-2" cx="33" cy="32" r="31"/></g><path id="Long_Shadow" data-name="Long Shadow" class="cls-3" d="M62.44,41.71,39.36,18.63,37.7,20.14l-5.89-2.2-5.91,5.16V34.5L20.58,47.4,36,62.85A31,31,0,0,0,62.44,41.71Z"/><g id="Top"><path class="cls-4" d="M33,16a9,9,0,0,0-9,9V39a9,9,0,0,0,18,0V25A9,9,0,0,0,33,16Zm5,23a5,5,0,0,1-10,0V25a5,5,0,0,1,10,0Z"/></g><g id="Bottom"><rect class="cls-5" x="20" y="30" width="26" height="18" rx="2" ry="2"/></g><g id="Holes"><path class="cls-6" d="M36,38a3,3,0,1,0-4.87,2.32,2,2,0,1,0,3.75,0A3,3,0,0,0,36,38Z"/></g></g></svg>
+<!--
+    <img src="./img/lock.svg" style="width: 86px; height: auto;" srcset="equilateral.svg" alt="Temp Logo" /> -->
+    <div style="font-size: 8pt; padding: 16px; background-color: #efefef; border-color: #0a0a0a; margin: 0 auto; width: 50vw">
+      <p>This prototype displays the manyfactor feature, whereby you can have others authorize a particular activity, such as sending out a bill, or executing an action.</p>
+      <p>The auth code displayed here is a request handle for such an activity, generated dynamically when this feature is required.</p>
+      <p>The number of contacts can be configured on a user-by-user basis. In this case, it is hard-coded to three.</p>
+      <p>The Add Authorizor section currently lets you add ANY valid mobile number to require authorizations from. In the final, this will be a hard-coded list of numbers, again, specific by user.</p>
+      <p>Go ahead and specify three numbers of people who are with you, and will expect an SMS message, click &quot;Add&quot; to add each number; click &quot;Send authorizations&quot; when you are are ready.</p>
+      <p>They will receive a dynamically generated link to tap, in which they can then <strong>authorize</strong> a request to perform an action.</p>
+      <p>Once they authorize the request, there will be a counter which will increment.</p>
+      <p>Once the increment counter reaches the set required number of authorizations (again, three, in this case), you will then (and only then) be able to &quot; Do the thing.&quot;</p>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: center;">
       <p>
         <h2>Auth Code:</h2>
         <strong id="authUuid"></strong>
@@ -43,6 +57,9 @@
       </p>
     </div>
 
+    <div>
+      Copyright &copy; 2020, Four And A Half Giraffes, Ltd.
+    </div>
     <script>
       const sendAuthsButton = document.getElementById('requestAuths');
       sendAuthsButton.addEventListener('click', () => {
