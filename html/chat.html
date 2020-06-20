@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Unified Chat</title>
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            const socket = io();
+        </script>
+    </head>
+
+    <body>
+        <h1>Villains Chat</h1>
+        <div style="width: 100%; justify-content: space-between; display: flex; flex-direction: row;">
+            <div style="width: 25%; margin-right: 16px">
+                <h3>Users</h3>
+                <div id="user-list" style="height: 50vh; overflow-y: scroll; margin-bottom: 16px; padding: 16px">
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                    <input id="new-user-name" placeholder="name" />
+                    <input id="new-user-email" placeholder="email" />
+                    <input id="new-user-sms" placeholder="+13060000000" />
+                    <button id="add-user">Add User</button>
+                </div>
+            </div>
+            <div style="width: 75vw">
+                <h3>Chatting with <span id="current-user"></span></h3>
+                <div>
+                    <h2>Chat History</h2>
+                    <div id="chat-history" style="width: 100%; height: 50vh; overflow-y: scroll; border: 1px solid #000">
+                        <em>No history yet</em>
+                    </div>
+                </div>
+        
+                <div style="display: flex; flex-direction: column; align-items: center;">
+        
+                    <div style="width: 100%; display: flex; flex-direction: column; align-items: flex-start;">
+                        <div>
+                            <label style="display: block" for="response">Reply</label>
+                        </div>
+                        <textarea id="message-response" rows="5" style="width: 100%;"></textarea>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: row; align-items: center;">
+                        <button id="reply-email" style="margin: 16px;">
+                            Reply Email
+                        </button>
+                        <button id="reply-sms" style="margin: 16px;">
+                            Reply SMS
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+    <script>
+        const chatHistory = document.getElementById('chat-history');
+        const replyEmailButton = document.getElementById('reply-email');
+        const replySMSButton = document.getElementById('reply-sms');
+        const refreshButton = document.getElementById('refresh-button');
+        const textArea = document.getElementById('message-response');
+        const chatUsersArea = document.getElementById('user-list');
+        const currentUserSpan = document.getElementById('current-user');
+
+        const addUserButton = document.getElementById('add-user');
+
+        const addUserName = document.getElementById('new-user-name');
+        const addUserPhone = document.getElementById('new-user-sms');
+        const addUserEmail = document.getElementById('new-user-email');
+
+        let currentUser = {};
+        let users = [];
+
+        socket.on('connect', (_) => {
+            getUsers();
+        });
+
+        socket.on('next-messages', (payload) => {
+            const parsedPayload = JSON.parse(payload);
+            const { user } = parsedPayload;
+            console.log(payload);
+            console.log(parsedPayload);
+
+            // getAndRenderHistory(user.userId);
+        });
+
+        socket.on('next-message', (payload) => {
+            console.log('next-message', payload);
+            const parsedPayload = JSON.parse(payload); 
+            getAndRenderHistory(parsedPayload.userId);
+        });
+
+        socket.on('users-changed', (payload) => {
+            console.log('users-changed');
+            users = JSON.parse(payload);
+            renderUsers(users);
+        });
+
+        addUserButton.addEventListener('click', () => {
+            const name = addUserName.value;
+            const email = addUserEmail.value;
+            const sms = addUserPhone.value;
+
+            addUserName.value = '';
+            addUserEmail.value = '';
+            addUserPhone.value = '';
+
+            const URL = '/api/messaging/users';
+            const options = {
+                method: 'post',
+                headers: { 
+                    'content-type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name,
+                    email,
+                    sms,
+                }),
+            }
+
+            fetch(URL, options)
+            .then((response) => response.json())
+            .then((parsedApiResponse) => {
+                console.log('parsedApiResponse', parsedApiResponse);
+            })
+            .catch((error) => {
+                console.log(error);
+            });
+        });
+
+        function getUsers() {
+            chatUsersArea.innerHTML = 'Loading users...';
+
+            const URL = '/api/messaging/users';
+            const options = {
+                method: 'get',
+                headers: { 'content-type': 'application/json' }
+            };
+
+            fetch(URL, options)
+            .then((response) => response.json())
+            .then((parsedApiResponse) => {
+                // render users
+                users = parsedApiResponse;
+                renderUsers(users);
+            }).catch((error) => {
+                console.log(error);
+            });
+        }
+
+        function renderUsers(users) {
+            chatUsersArea.innerHTML = '';
+
+            users.forEach((user) => {
+                const userDiv = document.createElement('div');
+                userDiv.innerHTML = user.name;
+                userDiv.id = user.userId;
+                userDiv.tabIndex = 0;
+                userDiv.dataset['userId'] = user.userId;
+                userDiv.style.border = '1px solid #000';
+                userDiv.style.padding = '8px';
+                userDiv.style.margin = '8px 16px';
+                userDiv.style.backgroundColor = '#efefef';
+                userDiv.style.cursor = 'pointer';
+
+                const userId = userDiv.userId;
+
+                userDiv.addEventListener('click', (e) => {
+                    const target = e.target;
+                    const {userId} = target.dataset;
+                    setCurrentUser(userId);
+                });
+
+                chatUsersArea.appendChild(userDiv);
+            });
+        }
+
+        function setCurrentUser(userId) {
+            const user = users.find((u) => u.userId === parseInt(userId));
+            currentUser = user;
+
+            currentUserSpan.innerHTML = user.name;
+            getAndRenderHistory(user.userId);
+        }
+
+        replySMSButton.addEventListener('click', () => {
+            const bodyContent = textArea.value;
+            const userId = currentUser.userId; // TODO: to the actual user id
+
+            const payload = {
+                content: bodyContent,
+                userId,
+            };
+
+            textArea.value = "";
+
+            const URL = '/api/messaging/send-sms';
+            const options = {
+                method: 'post',
+                body: JSON.stringify(payload),
+                headers: {
+                    'content-type': 'application/json',
+                },
+            };
+            
+            fetch(URL, options)
+            .then((apiResponse) => apiResponse.json())
+            .then((parsedApiResponse) => {
+                getAndRenderHistory(userId);
+            })
+            .catch((error) => {
+                console.log('error', error);
+            });
+        });
+
+        replyEmailButton.addEventListener('click', () => {
+            const bodyContent = textArea.value;
+            const userId = currentUser.userId; // TODO: to the actual user id
+
+            const payload = {
+                content: bodyContent,
+                userId,
+            };
+
+            textArea.value = "";
+
+            const URL = '/api/messaging/send-email';
+            const options = {
+                method: 'post',
+                body: JSON.stringify(payload),
+                headers: {
+                    'content-type': 'application/json',
+                },
+            };
+            
+            fetch(URL, options)
+            .then((apiResponse) => apiResponse.json())
+            .then((parsedApiResponse) => {
+                getAndRenderHistory(userId);
+            })
+            .catch((error) => {
+                console.log('error', error);
+            });
+        });
+
+        function getAndRenderHistory(userId) {
+            if (parseInt(userId) !== currentUser.userId) {
+                // not viewing this user. don't need this.
+                return;
+            }
+
+            fetch(`/api/messaging/get-history/${userId}`, { headers: { 'content-type': 'application/json' }})
+            .then((response) => response.json())
+            .then((parsedApiResponse) => {
+                console.log('parsedResponse', parsedApiResponse);
+                // populate history
+
+                const { history } = parsedApiResponse;
+                chatHistory.innerHTML = '';
+                history.forEach((historyItem) => {
+                    const alignmentStyle = historyItem.direction === 'incoming' ? 'left' : 'right';
+                    const historyDiv = document.createElement('div');
+                    historyDiv.style.textAlign = alignmentStyle;
+                    historyDiv.style.border = '1px solid #000';
+                    historyDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.8';
+
+                    historyDiv.style.width = '250px';
+                    historyDiv.style.margin = '16px';
+                    historyDiv.style.padding = '16px';
+
+                    if (historyItem.direction === 'outgoing') {
+                        historyDiv.style.position = 'relative';
+                        historyDiv.style.right = 'calc(-65vw + 250px)';
+                        historyDiv.style.border = '1px solid #00f';
+                        historyDiv.style.backgroundColor = 'rgba(0, 0, 255, 0.6';
+                        historyDiv.style.color = '#fff';
+                    }
+
+                    historyDiv.innerHTML = historyItem.body;
+                    chatHistory.appendChild(historyDiv);
+                });
+            }).catch((error) => {
+                console.log(error);
+                throw new Error(error);
+            });
+        }
+    </script>
+    </body>
+</html>
