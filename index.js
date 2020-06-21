@@ -125,7 +125,25 @@ app.post('/api/messaging/incoming-sms', (req, res) => {
 });
 
 app.post('/api/messaging/incoming-email', (req, res) => {
+  const { content, from } = req.body
+  const user = _chatUsers.find((c) => from.indexOf(c.email) > -1);
 
+  if (!user) {
+    console.log('no user found.');
+    return res.status(200).json({ message: 'no such user. But we\'ll store them message.'});
+  }
+
+  const chatItem = {
+    userId: user.userId,
+    direction: INCOMING,
+    body: content.body.split('> On')[0], // first part, before replies
+    dateTime: new Date(),
+  }
+
+  _chats.push(chatItem);
+
+  io.emit('next-message', JSON.stringify(chatItem));
+  return res.status(200).json({ status: 'ok'});
 });
 
 // UNRELATED. This is the messaging endpoint i might work on for Villains
@@ -195,14 +213,28 @@ app.post('/api/messaging/send-email', (req, res) => {
     return res.status(404).json({ error: 'no such user.'});
   }
 
+  // update history
+  _chats.push({
+    userId,
+    body: content,
+    direction: OUTGOING,
+    dateTime: new Date(),
+  });
+
   const data = {
     from: `Villains Strength And Conditioning <${MG_FROM}>`,
+    'h:Reply-To': 'villains@manyfactor.io',
     to: user.email,
     subject: 'Ongoing chat',
     text: content,
   };
 
   mg.messages().send(data, function (error, body) {
+    if (error) {
+      console.log('error', error);
+      return res.status(400).json({ error });
+    }
+
     return res.status(200).json({ status: 'ok'});
   });
 });
